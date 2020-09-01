@@ -3,6 +3,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Text;
 using Bicep.Cli.CommandLine;
 using Bicep.Cli.Logging;
 using Bicep.Cli.Utils;
@@ -15,6 +16,7 @@ using Newtonsoft.Json;
 using Bicep.Cli.CommandLine.Arguments;
 using Bicep.Core.TypeSystem.Az;
 using Bicep.Core.TypeSystem;
+using Bicep.Decompiler;
 
 namespace Bicep.Cli
 {
@@ -32,6 +34,7 @@ namespace Bicep.Cli
         public static int Main(string[] args)
         {
             var program = new Program(Console.Out, Console.Error);
+
             return program.Run(args);
         }
 
@@ -46,25 +49,24 @@ namespace Bicep.Cli
                 IDiagnosticLogger logger = new BicepDiagnosticLogger(loggerFactory.CreateLogger("bicep"));
                 try
                 {
-                    switch (ArgumentParser.Parse(args))
+                    switch (ArgumentParser.TryParse(args))
                     {
                         case BuildArguments buildArguments: // build
-                            Build(logger, buildArguments);
-                            break;
+                            return Build(logger, buildArguments);
+                        case DecompileArguments decompileArguments:
+                            return Decompile(logger, decompileArguments);
                         case VersionArguments _: // --version
                             ArgumentParser.PrintVersion(this.outputWriter);
-                            break;
+                            return 0;
                         case HelpArguments _: // --help
                             ArgumentParser.PrintUsage(this.outputWriter);
-                            break;
-                        case UnrecognizedArguments unrecognizedArguments: // everything else
+                            return 0;
+                        default:
                             var exeName = ArgumentParser.GetExeName();
-                            this.errorWriter.WriteLine($"Unrecognized arguments '{unrecognizedArguments.SuppliedArguments}' specified. Use '{exeName} --help' to view available options.");
+                            var arguments = string.Join(' ', args);
+                            this.errorWriter.WriteLine($"Unrecognized arguments '{arguments}' specified. Use '{exeName} --help' to view available options.");
                             return 1;
                     }
-
-                    // return non-zero exit code on errors
-                    return logger.HasLoggedErrors ? 1 : 0;
                 }
                 catch (CommandLineException exception)
                 {
@@ -88,20 +90,24 @@ namespace Bicep.Cli
             });
         }
 
-        private void Build(IDiagnosticLogger logger, BuildArguments arguments)
+        private int Build(IDiagnosticLogger logger, BuildArguments arguments)
         {
             var bicepPaths = arguments.Files.Select(PathHelper.ResolvePath).ToArray();
             if (arguments.OutputToStdOut)
             {
                 BuildManyFilesToStdOut(logger, bicepPaths);
-                return;
+            }
+            else
+            {
+                foreach (string bicepPath in bicepPaths)
+                {
+                    string outputPath = PathHelper.GetDefaultOutputPath(bicepPath);
+                    BuildSingleFile(logger, bicepPath, outputPath);
+                }
             }
 
-            foreach (string bicepPath in bicepPaths)
-            {
-                string outputPath = PathHelper.GetDefaultOutputPath(bicepPath);
-                BuildSingleFile(logger, bicepPath, outputPath);
-            }
+            // return non-zero exit code on errors
+            return logger.HasLoggedErrors ? 1 : 0;
         }
 
         private static void BuildSingleFile(IDiagnosticLogger logger, string bicepPath, string outputPath)
@@ -178,6 +184,48 @@ namespace Bicep.Cli
             catch (Exception exception)
             {
                 throw new BicepException(exception.Message, exception);
+            }
+        }
+
+        public int Decompile(IDiagnosticLogger logger, DecompileArguments arguments)
+        {
+            var hadErrors = false;
+            foreach (var filePath in arguments.Files)
+            {
+                hadErrors |= !DecompileSingleFile(logger, filePath);
+            }
+
+            return hadErrors ? 1 : 0;
+        }
+
+        private bool DecompileSingleFile(IDiagnosticLogger logger, string filePath)
+        {
+            try
+            {
+                var jsonInput = File.ReadAllText(filePath);
+                var outputFile = Path.ChangeExtension(filePath, "bicep");
+
+                var program = TemplateConverter.DecompileTemplate(jsonInput);
+                var bicepOutput = PrintVisitor.Print(program);
+
+                var resourceTypeRegistrar = new ResourceTypeRegistrar(new AzResourceTypeProvider());
+                var compilation = new Compilation(resourceTypeRegistrar, SyntaxFactory.CreateFromText(bicepOutput));
+                var diagnostics = compilation.GetSemanticModel().GetAllDiagnostics().ToArray();
+
+                File.WriteAllText(outputFile, bicepOutput);
+
+                var lineStarts = TextCoordinateConverter.GetLineStarts(bicepOutput);
+                foreach (var diagnostic in diagnostics)
+                {
+                    logger.LogDiagnostic(outputFile, diagnostic, lineStarts);
+                }
+
+                return true;
+            }
+            catch (Exception exception)
+            {
+                this.errorWriter.WriteLine($"{filePath}: {exception.Message}");
+                return false;
             }
         }
     }
