@@ -144,6 +144,16 @@ namespace Bicep.Core.TypeSystem
                 }
 
                 var declaredType = resourceTypeRegistrar.GetType(typeReference);
+
+                if (declaredType is ResourceType resourceType && !resourceTypeRegistrar.HasType(resourceType.TypeReference))
+                {
+                    // TODO turn this into a proper warning
+                    diagnostics.Add(new Diagnostic(
+                        syntax.Type.Span,
+                        DiagnosticLevel.Warning,
+                        "BCP0XXX",
+                        $"Resource type {resourceType.TypeReference.FormatName()} does not have types available"));
+                }
             
                 return TypeValidator.NarrowType(typeManager, syntax.Body, declaredType, diagnostics);
             });
