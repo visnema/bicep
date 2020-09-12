@@ -27,7 +27,7 @@ namespace Bicep.Core.SemanticModel
         /// </summary>
         public IdentifierSyntax NameSyntax { get; }
 
-        protected TypeSymbol? GetPrimitiveTypeByName(string typeName)
+        protected TypeSymbol? GetPrimitiveTypeByName(string? typeName)
         {
             var type = this.Context.TypeManager.GetTypeByName(typeName);
             if (type?.TypeKind == TypeKind.Primitive)

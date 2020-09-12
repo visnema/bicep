@@ -7,9 +7,10 @@ namespace Bicep.Core.Syntax
 {
     public class ParameterDeclarationSyntax : SyntaxBase, IDeclarationSyntax
     {
-        public ParameterDeclarationSyntax(Token parameterKeyword, IdentifierSyntax name, TypeSyntax type, SyntaxBase? modifier, Token? newLine)
+        public ParameterDeclarationSyntax(Token parameterKeyword, IdentifierSyntax name, SyntaxBase type, SyntaxBase? modifier, Token? newLine)
         {
             AssertKeyword(parameterKeyword, nameof(parameterKeyword), LanguageConstants.ParameterKeyword);
+            AssertSyntaxType(type, nameof(type), typeof(TypeSyntax), typeof(MissingSyntax), typeof(SkippedTriviaSyntax));
             AssertSyntaxType(modifier, nameof(modifier), typeof(ParameterDefaultValueSyntax), typeof(ObjectSyntax));
             AssertTokenType(newLine, nameof(newLine), TokenType.NewLine);
 
@@ -24,7 +25,7 @@ namespace Bicep.Core.Syntax
         
         public IdentifierSyntax Name { get; }
 
-        public TypeSyntax Type { get; }
+        public SyntaxBase Type { get; }
 
         // This is a modifier of the parameter and not a modifier of the type
         public SyntaxBase? Modifier { get; }
@@ -35,5 +36,7 @@ namespace Bicep.Core.Syntax
             => visitor.VisitParameterDeclarationSyntax(this);
 
         public override TextSpan Span => TextSpan.Between(this.ParameterKeyword, TextSpan.LastNonNull(Type, Modifier, NewLine));
+
+        public TypeSyntax? ParameterType => this.Type as TypeSyntax;
     }
 }

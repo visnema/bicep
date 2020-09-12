@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Bicep.Core.Diagnostics;
+using Bicep.Core.Extensions;
 using Bicep.Core.Parser;
 
 namespace Bicep.Core.Syntax
@@ -15,6 +16,13 @@ namespace Bicep.Core.Syntax
             this.Span = span;
             this.Elements = elements.ToImmutableArray();
             this.Diagnostics = diagnostics.ToImmutableArray();
+        }
+
+        public SkippedTriviaSyntax(Token token, Diagnostic diagnostic)
+        {
+            this.Span = token.Span;
+            this.Elements = new TokenOrSyntax(token).AsEnumerable().ToImmutableArray();
+            this.Diagnostics = diagnostic.AsEnumerable().ToImmutableArray();
         }
 
         public override bool IsSkipped => true;

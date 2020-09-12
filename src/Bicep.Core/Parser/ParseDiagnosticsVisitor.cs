@@ -39,6 +39,13 @@ namespace Bicep.Core.Parser
             }
         }
 
+        public override void VisitMissingSyntax(MissingSyntax syntax)
+        {
+            base.VisitMissingSyntax(syntax);
+
+            this.diagnostics.Add(syntax.Diagnostic);
+        }
+
         public override void VisitIdentifierSyntax(IdentifierSyntax syntax)
         {
             if (syntax.IdentifierName.Length > LanguageConstants.MaxIdentifierLength)

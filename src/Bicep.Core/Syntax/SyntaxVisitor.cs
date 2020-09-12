@@ -150,6 +150,10 @@ namespace Bicep.Core.Syntax
             }
         }
 
+        public virtual void VisitMissingSyntax(MissingSyntax syntax)
+        {
+        }
+
         public virtual void VisitObjectSyntax(ObjectSyntax syntax)
         {
             this.VisitToken(syntax.OpenBrace);

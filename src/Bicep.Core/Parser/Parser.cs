@@ -66,7 +66,7 @@ namespace Bicep.Core.Parser
         {
             var keyword = ExpectKeyword(LanguageConstants.ParameterKeyword);
             var name = Identifier(b => b.ExpectedParameterIdentifier());
-            var type = Type(b => b.ExpectedParameterType());
+            var type = TypeOrPlaceholder(b => b.ExpectedParameterType());
 
             var current = reader.Peek();
             SyntaxBase? modifier = current.Type switch
@@ -371,6 +371,28 @@ namespace Bicep.Core.Parser
             var identifier = Expect(TokenType.Identifier, errorFunc);
 
             return new TypeSyntax(identifier);
+        }
+
+        private SyntaxBase TypeOrPlaceholder(DiagnosticBuilder.ErrorBuilderDelegate errorFunc)
+        {
+            var token = this.reader.Peek();
+            switch (token.Type)
+            {
+                case TokenType.Identifier:
+                    return new TypeSyntax(this.reader.Read());
+
+                case TokenType.NewLine:
+                case TokenType.EndOfFile:
+                    // enclosing declaration ended prematurely - don't consume the token
+                    // TODO: Error
+                    var span = new TextSpan(token.Span.Position, 0);
+                    return new MissingSyntax(span, errorFunc(DiagnosticBuilder.ForPosition(span)));
+
+                default:
+                    // unexpected token 
+                    var skipped = this.reader.Read();
+                    return new SkippedTriviaSyntax(skipped, errorFunc(DiagnosticBuilder.ForPosition(skipped.Span)));
+            }
         }
 
         private NumericLiteralSyntax NumericLiteral()
