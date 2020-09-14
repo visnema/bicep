@@ -20,7 +20,9 @@ namespace Bicep.Core.SemanticModel
 
         public ParameterDeclarationSyntax DeclaringParameter => (ParameterDeclarationSyntax) this.DeclaringSyntax;
 
-        public TypeSymbol Type => this.GetPrimitiveTypeByName(this.DeclaringParameter.ParameterType?.TypeName) ?? new ErrorTypeSymbol(DiagnosticBuilder.ForPosition(this.DeclaringParameter.Type).InvalidParameterType());
+        public TypeSymbol Type => this.DeclaringParameter.ParameterType == null
+            ? new ErrorTypeSymbol(Enumerable.Empty<ErrorDiagnostic>()) 
+            : this.GetPrimitiveTypeByName(this.DeclaringParameter.ParameterType.TypeName) ?? new ErrorTypeSymbol(DiagnosticBuilder.ForPosition(this.DeclaringParameter.Type).InvalidParameterType());
 
         public SyntaxBase? Modifier { get; }
 

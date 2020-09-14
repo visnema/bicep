@@ -19,7 +19,9 @@ namespace Bicep.Core.SemanticModel
 
         public OutputDeclarationSyntax DeclaringOutput => (OutputDeclarationSyntax) this.DeclaringSyntax;
 
-        public TypeSymbol Type => this.GetPrimitiveTypeByName(this.DeclaringOutput.Type.TypeName) ?? new ErrorTypeSymbol(DiagnosticBuilder.ForPosition(this.DeclaringOutput.Type).InvalidOutputType());
+        public TypeSymbol Type => this.DeclaringOutput.OutputType == null
+            ? new ErrorTypeSymbol(Enumerable.Empty<ErrorDiagnostic>()) 
+            : this.GetPrimitiveTypeByName(this.DeclaringOutput.OutputType.TypeName) ?? new ErrorTypeSymbol(DiagnosticBuilder.ForPosition(this.DeclaringOutput.Type).InvalidOutputType());
 
         public SyntaxBase Value { get; }
 

@@ -7,9 +7,10 @@ namespace Bicep.Core.Syntax
 {
     public class OutputDeclarationSyntax : SyntaxBase, IDeclarationSyntax
     {
-        public OutputDeclarationSyntax(Token outputKeyword, IdentifierSyntax name, TypeSyntax type, Token assignment, SyntaxBase value, Token? newLine)
+        public OutputDeclarationSyntax(Token outputKeyword, IdentifierSyntax name, SyntaxBase type, Token assignment, SyntaxBase value, Token? newLine)
         {
             AssertKeyword(outputKeyword, nameof(outputKeyword), LanguageConstants.OutputKeyword);
+            AssertSyntaxType(type, nameof(type), typeof(TypeSyntax), typeof(MissingSyntax), typeof(SkippedTriviaSyntax));
             AssertTokenType(assignment, nameof(assignment), TokenType.Assignment);
             AssertTokenType(newLine, nameof(newLine), TokenType.NewLine);
             
@@ -25,7 +26,7 @@ namespace Bicep.Core.Syntax
 
         public IdentifierSyntax Name { get; }
 
-        public TypeSyntax Type { get; }
+        public SyntaxBase Type { get; }
 
         public Token Assignment { get; }
 
@@ -36,5 +37,7 @@ namespace Bicep.Core.Syntax
         public override void Accept(SyntaxVisitor visitor) => visitor.VisitOutputDeclarationSyntax(this);
 
         public override TextSpan Span => TextSpan.Between(OutputKeyword, TextSpan.LastNonNull(Value, NewLine));
+
+        public TypeSyntax? OutputType => this.Type as TypeSyntax;
     }
 }

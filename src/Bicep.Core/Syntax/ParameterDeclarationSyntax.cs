@@ -37,6 +37,9 @@ namespace Bicep.Core.Syntax
 
         public override TextSpan Span => TextSpan.Between(this.ParameterKeyword, TextSpan.LastNonNull(Type, Modifier, NewLine));
 
+        /// <summary>
+        /// Gets the parameter type. Will be null if the type has parse errors.
+        /// </summary>
         public TypeSyntax? ParameterType => this.Type as TypeSyntax;
     }
 }

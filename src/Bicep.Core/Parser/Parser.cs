@@ -113,7 +113,7 @@ namespace Bicep.Core.Parser
         {
             var keyword = ExpectKeyword(LanguageConstants.OutputKeyword);
             var name = this.Identifier(b => b.ExpectedOutputIdentifier());
-            var type = Type(b => b.ExpectedParameterType());
+            var type = TypeOrPlaceholder(b => b.ExpectedParameterType());
             var assignment = this.Assignment();
             var value = this.Expression();
 
@@ -128,7 +128,7 @@ namespace Bicep.Core.Parser
             var name = this.Identifier(b => b.ExpectedResourceIdentifier());
 
             // TODO: Unify StringSyntax with TypeSyntax
-            var type = ThrowIfSkipped(() => this.InterpolableString(), b => b.ExpectedResourceTypeString());
+            var type = ThrowIfSkipped(this.InterpolableString, b => b.ExpectedResourceTypeString());
 
             var assignment = this.Assignment();
             var body = this.Object();
@@ -207,7 +207,7 @@ namespace Bicep.Core.Parser
         {
             Token operatorToken = this.reader.Peek();
 
-            if (Operators.TokenTypeToUnaryOperator.TryGetValue(operatorToken.Type, out var @operator))
+            if (Operators.TokenTypeToUnaryOperator.ContainsKey(operatorToken.Type))
             {
                 this.reader.Read();
 
@@ -414,7 +414,7 @@ namespace Bicep.Core.Parser
             var startToken = reader.Peek();
             var tokensOrSyntax = new List<TokenOrSyntax>();
 
-            SyntaxBase? processStringSegment(bool isFirstSegment)
+            SyntaxBase? ProcessStringSegment(bool isFirstSegment)
             {
                 // This local function will be called in a loop to consume string segments and expressions in interpolation holes.
                 // Returning a non-null result will result in the caller terminating the loop and returning the given syntax tree for the string.
@@ -512,7 +512,7 @@ namespace Bicep.Core.Parser
             while (true)
             {
                 // Here we're actually parsing and returning the completed string
-                var output = processStringSegment(isFirstSegment);
+                var output = ProcessStringSegment(isFirstSegment);
                 if (output != null)
                 {
                     return output;
