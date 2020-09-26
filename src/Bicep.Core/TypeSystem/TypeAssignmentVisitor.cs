@@ -116,8 +116,17 @@ namespace Bicep.Core.TypeSystem
             });
 
         public override void VisitParameterDeclarationSyntax(ParameterDeclarationSyntax syntax)
-            => AssignTypeWithCaching(syntax, () => {
-                var primitiveType = LanguageConstants.TryGetDeclarationType(syntax.Type.TypeName);
+            => AssignTypeWithCaching(syntax, () =>
+            {
+                var typeSyntax = syntax.ParameterType;
+                if (typeSyntax == null)
+                {
+                    // the parameter has parse errors (either missing or was skipped)
+                    // since there's already a parse error to cover it, we don't need to add a type error
+                    return LanguageConstants.Any;
+                }
+                
+                var primitiveType = LanguageConstants.TryGetDeclarationType(typeSyntax.TypeName);
                 if (primitiveType == null)
                 {
                     return new ErrorTypeSymbol(DiagnosticBuilder.ForPosition(syntax.Type).InvalidParameterType());

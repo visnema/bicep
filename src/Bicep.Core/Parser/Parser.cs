@@ -79,23 +79,33 @@ namespace Bicep.Core.Parser
         {
             var keyword = ExpectKeyword(LanguageConstants.ParameterKeyword);
             var name = Identifier(b => b.ExpectedParameterIdentifier());
-            var type = Type(b => b.ExpectedParameterType());
+            var type = this.WithRecovery(
+                () => Type(b => b.ExpectedParameterType()),
+                consumeTerminator: false,
+                TokenType.Assignment, TokenType.LeftBrace, TokenType.NewLine);
 
-            var current = reader.Peek();
-            SyntaxBase? modifier = current.Type switch
-            {
-                // the parameter does not have a modifier
-                TokenType.NewLine => null,
-                TokenType.EndOfFile => null,
+            // TODO: Need a better way to choose the terminating token
+            SyntaxBase? modifier = this.WithRecoveryNullable(
+                () =>
+                {
+                    var current = reader.Peek();
+                    return current.Type switch
+                    {
+                        // the parameter does not have a modifier
+                        TokenType.NewLine => null,
+                        TokenType.EndOfFile => null,
 
-                // default value is specified
-                TokenType.Assignment => this.ParameterDefaultValue(),
+                        // default value is specified
+                        TokenType.Assignment => this.ParameterDefaultValue(),
 
-                // modifier is specified
-                TokenType.LeftBrace => this.Object(),
+                        // modifier is specified
+                        TokenType.LeftBrace => this.Object(),
 
-                _ => throw new ExpectedTokenException(current, b => b.ExpectedParameterContinuation())
-            };
+                        _ => throw new ExpectedTokenException(current, b => b.ExpectedParameterContinuation())
+                    };
+                },
+                consumeTerminator: false,
+                TokenType.NewLine);
 
             return new ParameterDeclarationSyntax(keyword, name, type, modifier);
         }
