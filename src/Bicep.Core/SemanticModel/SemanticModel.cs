@@ -43,10 +43,6 @@ namespace Bicep.Core.SemanticModel
             var typeValidationDiagnostics = TypeValidationVisitor.GetTypeValidationDiagnostics(bindings, typeManager, this.Root.Syntax);
             diagnostics.AddRange(typeValidationDiagnostics);
 
-            // TODO: Remove this when we fix IL limitations
-            var emitLimitationVisitor = new EmitLimitationVisitor(diagnostics, this);
-            emitLimitationVisitor.Visit(this.Root.Syntax);
-
             return diagnostics;
         }
 
